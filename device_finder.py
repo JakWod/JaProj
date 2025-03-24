@@ -129,22 +129,10 @@ class DeviceScanner:
     
     def scan_bluetooth_devices(self):
         """Scan for available Bluetooth devices and show paired devices."""
-        if not BLUETOOTH_MODULE_AVAILABLE:
-            # If bleak module is not available, try to get paired devices at least
-            paired_devices = get_paired_bluetooth_devices()
-            if paired_devices:
-                return {
-                    "status": "success", 
-                    "devices": paired_devices, 
-                    "warning": "Scanning for new devices is unavailable, showing only paired devices."
-                }
-            else:
-                return {"error": "Module 'bleak' is not available. Cannot scan Bluetooth devices."}
+        
                 
         try:
-            # First get paired devices
-            paired_devices = get_paired_bluetooth_devices()
-            
+
             # Call the asynchronous function synchronously
             if hasattr(asyncio, 'run'):  # Python 3.7+
                 discovered_devices = asyncio.run(self._scan_bluetooth_devices_async())
@@ -156,7 +144,7 @@ class DeviceScanner:
                 loop.close()
             
             # Combine results, showing paired devices first
-            all_devices = paired_devices + discovered_devices
+            all_devices =  discovered_devices
             
             # Remove duplicates (devices with the same address)
             unique_devices = []
@@ -214,133 +202,10 @@ class DeviceScanner:
             return {"error": f"Wystąpił błąd podczas sprawdzania kamer: {str(e)}"}
 
 
-def get_paired_bluetooth_devices():
-    """Get a list of paired Bluetooth devices from the system."""
-    system = platform.system()
-    paired_devices = []
-    
-    try:
-        if system == "Windows":
-            # On Windows, use PowerShell to get paired devices
-            powershell_cmd = "Get-PnpDevice -Class Bluetooth | Where-Object { $_.Status -eq 'OK' } | Select-Object FriendlyName, DeviceID"
-            result = subprocess.run(["powershell", "-Command", powershell_cmd], 
-                                   capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            
-            if result.returncode == 0:
-                # Parse the result
-                lines = result.stdout.strip().split('\n')
-                current_device = {}
-                
-                for i, line in enumerate(lines):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    if line.startswith("FriendlyName") or line.startswith("-"):
-                        continue  # Skip headers
-                    
-                    if "DeviceID" in line:
-                        # This is a line with DeviceID
-                        match = re.search(r"DeviceID\s*:\s*(.*)", line)
-                        if match and current_device:
-                            current_device["address"] = match.group(1)
-                            paired_devices.append(current_device)
-                            current_device = {}
-                    else:
-                        # This is likely a line with device name
-                        current_device = {"name": line, "type": "🔷", "id": f"paired_bt_{len(paired_devices)}"}
-            
-        elif system == "Darwin":  # macOS
-            # On macOS, use system tools
-            result = subprocess.run(["system_profiler", "SPBluetoothDataType"], 
-                                   capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')
-                current_device = None
-                
-                for line in lines:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    if ":" in line and not line.endswith(":"):
-                        parts = line.split(":", 1)
-                        key = parts[0].strip()
-                        value = parts[1].strip()
-                        
-                        if key == "Device Name" and current_device is None:
-                            current_device = {"name": value, "type": "🔷", "id": f"paired_bt_{len(paired_devices)}"}
-                        elif key == "Address" and current_device is not None:
-                            current_device["address"] = value
-                            paired_devices.append(current_device)
-                            current_device = None
-                
-        elif system == "Linux":
-            # On Linux, use bluetoothctl
-            result = subprocess.run(["bluetoothctl", "paired-devices"], 
-                                   capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            
-            if result.returncode == 0:
-                lines = result.stdout.strip().split('\n')
-                
-                for line in lines:
-                    match = re.search(r"Device\s+([0-9A-F:]+)\s+(.*)", line)
-                    if match:
-                        address = match.group(1)
-                        name = match.group(2)
-                        paired_devices.append({
-                            "name": name,
-                            "address": address,
-                            "type": "🔷",
-                            "id": f"paired_bt_{len(paired_devices)}"
-                        })
-        
-    except Exception as e:
-        print(f"Error while getting paired Bluetooth devices: {e}")
-    
-    # Add information that these are paired devices
-    for device in paired_devices:
-        device["paired"] = True
-        device["name"] = f"{device['name']} (paired)"
-    
-    return paired_devices
 
 
-def setup_static_files():
-    """Copy frontend files to the static folder."""
-    try:
-        # Make sure static folder exists
-        os.makedirs('static', exist_ok=True)
-        os.makedirs('static/css', exist_ok=True)
-        os.makedirs('static/js', exist_ok=True)
-        
-        # Get path to current script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        # Location of frontend files (assuming they are in the same folder)
-        html_path = os.path.join(script_dir, 'index.html')
-        css_path = os.path.join(script_dir, 'style.css')
-        js_path = os.path.join(script_dir, 'script.js')
-        
-        # Copy files if they exist
-        if os.path.exists(html_path):
-            import shutil
-            shutil.copy2(html_path, os.path.join('static', 'index.html'))
-            print(f"Copied {html_path} to static folder")
-        
-        if os.path.exists(css_path):
-            import shutil
-            shutil.copy2(css_path, os.path.join('static/css', 'style.css'))
-            print(f"Copied {css_path} to static/css folder")
-        
-        if os.path.exists(js_path):
-            import shutil
-            shutil.copy2(js_path, os.path.join('static/js', 'script.js'))
-            print(f"Copied {js_path} to static/js folder")
-    
-    except Exception as e:
-        print(f"Error during static files configuration: {e}")
+
+
 
 
 # Create a single scanner instance for the entire application
@@ -426,8 +291,7 @@ def server_error(e):
 
 
 if __name__ == '__main__':
-    # Configure static files before running the server
-    setup_static_files()
+    
     
     # Show information about available modules
     print("\n=== Available Modules Information ===")
