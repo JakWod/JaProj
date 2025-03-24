@@ -1,0 +1,1035 @@
+/**
+ * Device Management Application
+ * Main stylesheet
+ */
+
+/* ---------- GENERAL STYLES ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #1E2433; /* Deep navy blue */
+    display: flex;
+    min-height: 100vh;
+    color: white;
+    position: relative;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* ---------- SIDEBAR NAVIGATION ---------- */
+.sidebar {
+    width: 300px;
+    background-color: #141824; /* Darker navy blue */
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid #2A3042;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-300px);
+}
+
+.toggle-sidebar-external {
+    position: fixed;
+    left: 10px;
+    top: 15px;
+    background-color: #141824; /* Darker navy blue */
+    color: white;
+    border: 1px solid #2A3042;
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    display: none; /* Initially hidden */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 101;
+}
+
+.toggle-sidebar-inside {
+    background-color: #4D7CFE; /* Light blue */
+    color: white;
+    border: 1px solid #2A3042;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-sidebar-inside:hover {
+    background-color: #6A91FE; /* Lighter blue */
+}
+
+.sidebar.collapsed .toggle-sidebar-inside {
+    background-color: #141824; /* Darker navy blue */
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #2A3042;
+}
+
+.sidebar-dropdown {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    cursor: pointer;
+}
+
+.sidebar-text {
+    margin-left: 10px;
+}
+
+.search-icon {
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    color: #7A8CB1; /* Light blue-gray */
+    font-size: 16px;
+}
+
+.search-icon:hover {
+    color: #4D7CFE; /* Light blue */
+}
+
+/* Sidebar device items */
+.sidebar-link {
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid transparent;
+    margin-bottom: 2px;
+}
+
+.sidebar-link:hover {
+    background-color: #1E2433; /* Deep navy blue */
+    border-left-color: #4D7CFE; /* Light blue */
+    padding-left: 17px;
+}
+
+/* Active device style */
+.sidebar-link.active {
+    background-color: #1E2433;
+    border-left-color: #4D7CFE;
+    padding-left: 17px;
+}
+
+/* Favorite star styles */
+.favorite-star {
+    cursor: pointer;
+    font-size: 16px;
+    color: #7A8CB1; /* Light blue-gray for inactive star */
+    margin-right: 8px;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.favorite-star:hover {
+    color: #FFD700; /* Gold color on hover */
+    transform: scale(1.2);
+}
+
+.favorite-star.active {
+    color: #FFD700; /* Gold color for active star */
+}
+
+/* Device type icon styles */
+.device-type-icon {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+/* Category sections */
+.sidebar-category {
+    margin-top: 15px;
+    padding: 10px 15px;
+    font-size: 12px;
+    color: #7A8CB1; /* Light blue-gray */
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #2A3042;
+}
+
+.sidebar-category.favorite-devices {
+    margin-top: 10px;
+    color: #4D7CFE; /* Light blue for emphasis */
+}
+
+.sidebar-category.offline-devices {
+    margin-top: 25px;
+}
+
+/* Favorites pulse animation */
+@keyframes favoritePulse {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(255, 215, 0, 0.1); }
+    100% { background-color: transparent; }
+}
+
+.sidebar-link.just-favorited {
+    animation: favoritePulse 1s ease-in-out;
+}
+
+/* Devices and actions */
+.device-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.device-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    text-align: center;
+}
+
+.device-status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-online {
+    background-color: #4CAF50; /* Green */
+    box-shadow: 0 0 5px #4CAF50;
+}
+
+.status-offline {
+    background-color: #F44336; /* Red */
+}
+
+/* Device action buttons */
+.device-actions {
+    display: flex;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-link:hover .device-actions {
+    opacity: 1;
+}
+
+.device-action-btn {
+    background: transparent;
+    border: none;
+    color: #7A8CB1; /* Light blue-gray */
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.device-action-btn:hover {
+    color: #4D7CFE; /* Light blue */
+    background-color: #293148; /* Slightly lighter shade of background */
+    transform: scale(1.1);
+}
+
+/* Filtered devices */
+.sidebar-link.filtered {
+    display: none;
+}
+
+/* ---------- FILTER SECTION ---------- */
+.filters-section {
+    padding: 0;
+    border-bottom: 1px solid #2A3042;
+    margin-bottom: 5px;
+}
+
+.filters-header {
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #7A8CB1;
+    transition: color 0.3s;
+}
+
+.filters-header:hover {
+    color: #4D7CFE;
+}
+
+.filters-arrow {
+    font-size: 10px;
+    transition: transform 0.3s;
+}
+
+.filters-header.expanded .filters-arrow {
+    transform: rotate(180deg);
+}
+
+.filters-content {
+    padding: 10px 15px;
+    background-color: #191c2a;
+    border-top: 1px solid #2A3042;
+}
+
+.filter-group {
+    margin-bottom: 15px;
+}
+
+.filter-title {
+    font-size: 12px;
+    color: #7A8CB1;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.filter-checkbox {
+    margin-right: 10px;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 8px;
+    background-color: #293148;
+    border: 1px solid #3D4A69;
+    border-radius: 4px;
+    color: white;
+    font-size: 13px;
+    outline: none;
+}
+
+.filter-select:focus {
+    border-color: #4D7CFE;
+}
+
+.filter-button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 10px;
+    background-color: #293148;
+    border: 1px solid #3D4A69;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.filter-button:hover {
+    background-color: #3D4A69;
+}
+
+/* ---------- MAIN CONTENT AREA ---------- */
+.main-content {
+    flex: 1;
+    position: relative;
+    margin-left: 300px;
+    transition: margin-left 0.3s ease;
+    width: calc(100% - 300px);
+    background-color: #1E2433; /* Deep navy blue */
+    z-index: 1;
+}
+
+.main-content.expanded {
+    margin-left: 0;
+    width: 100%;
+}
+
+.header {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    z-index: 10;
+}
+
+.user-icon {
+    width: 35px;
+    height: 35px;
+    background-color: #4D7CFE; /* Light blue */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+}
+
+.central-wrapper {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #1E2433; /* Deep navy blue */
+    z-index: 2;
+}
+
+.central-content {
+    max-width: 700px;
+    width: 90%;
+    text-align: center;
+}
+
+.heading {
+    font-size: 32px;
+    margin-bottom: 30px;
+    position: relative;
+    display: inline-block;
+}
+
+.heading::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -10px;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 3px;
+    background-color: #4D7CFE; /* Light blue */
+    border-radius: 3px;
+}
+
+/* Add device button */
+.add-device-button {
+    background-color: #293148; /* Slightly lighter shade of background */
+    border: 1px solid #3D4A69;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    max-width: 700px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    margin: 0 auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.add-device-button:hover {
+    background-color: #3D4A69; /* Even lighter shade on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.add-device-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.plus-icon {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.footer {
+    position: absolute;
+    bottom: 10px;
+    font-size: 12px;
+    color: #7A8CB1; /* Light blue-gray */
+    width: 100%;
+    text-align: center;
+}
+
+.help-icon {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #3D4A69;
+    cursor: pointer;
+    background-color: #293148;
+    transition: all 0.3s ease;
+}
+
+.help-icon:hover {
+    background-color: #4D7CFE;
+    transform: scale(1.1);
+}
+
+/* ---------- MODALS ---------- */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background-color: #1E2433; /* Deep navy blue */
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    animation: modal-appear 0.3s ease-out;
+    border: 1px solid #3D4A69;
+}
+
+@keyframes modal-appear {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 18px 20px;
+    background-color: #293148; /* Slightly lighter shade of background */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #3D4A69;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4D7CFE; /* Light blue */
+}
+
+.modal-close {
+    background-color: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: white;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh; /* Maximum height is 60% of viewport height */
+    overflow-y: auto; /* Add scroll capability */
+}
+
+/* Hide default scrollbar for most browsers */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #1E2433;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #3D4A69;
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #4D7CFE;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    background-color: #141824; /* Darker navy blue */
+    border-top: 1px solid #3D4A69;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Form elements */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-control, .form-control2 {
+    width: 100%;
+    padding: 12px;
+    background-color: #293148; /* Slightly lighter shade of background */
+    border: 1px solid #3D4A69;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.form-control:focus, .form-control2:focus {
+    border-color: #4D7CFE; /* Light blue */
+    box-shadow: 0 0 0 2px rgba(77, 124, 254, 0.25);
+}
+
+.form-control:disabled, .form-control2:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.form-check-input {
+    margin-right: 10px;
+}
+
+/* Button styles */
+.btn {
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-cancel {
+    background-color: transparent;
+    border: 1px solid #3D4A69;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background-color: #293148; /* Slightly lighter shade of background */
+}
+
+.btn-primary {
+    background-color: #4D7CFE; /* Light blue */
+    border: 1px solid #4D7CFE;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(77, 124, 254, 0.3);
+}
+
+.btn-primary:hover {
+    background-color: #6A91FE; /* Lighter blue */
+    box-shadow: 0 4px 12px rgba(77, 124, 254, 0.5);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+.btn-primary:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+    20% {
+        transform: scale(25, 25);
+        opacity: 0.3;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(40, 40);
+    }
+}
+
+/* Connection options */
+.connection-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.connection-option {
+    background-color: #293148;
+    border: 1px solid #3D4A69;
+    border-radius: 8px;
+    padding: 15px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.connection-option:hover {
+    background-color: #3D4A69;
+    transform: translateY(-2px);
+}
+
+.connection-option.selected {
+    border-color: #4D7CFE;
+    background-color: rgba(77, 124, 254, 0.2);
+    box-shadow: 0 0 0 2px rgba(77, 124, 254, 0.3);
+}
+
+.connection-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.connection-label {
+    font-size: 14px;
+    color: white;
+}
+
+/* Device list */
+.device-list-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #3D4A69;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #3D4A69 #1E2433; /* For Firefox */
+}
+
+/* Styling scrollbar for device list */
+.device-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.device-list-container::-webkit-scrollbar-track {
+    background: #1E2433;
+}
+
+.device-list-container::-webkit-scrollbar-thumb {
+    background: #3D4A69;
+    border-radius: 3px;
+}
+
+.device-list-container::-webkit-scrollbar-thumb:hover {
+    background: #4D7CFE;
+}
+
+.device-list-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-bottom: 5px;
+}
+
+.device-list-item:hover {
+    background-color: #3D4A69;
+}
+
+.device-list-item.selected {
+    background-color: rgba(77, 124, 254, 0.2);
+    border: 1px solid #4D7CFE;
+}
+
+.device-list-icon {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.device-list-name {
+    font-size: 14px;
+}
+
+.device-list-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.device-list-detail {
+    font-size: 12px;
+    color: #7A8CB1;
+    margin-top: 3px;
+}
+
+.paired-badge {
+    margin-left: 5px;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.bluetooth-section {
+    margin-bottom: 15px;
+}
+
+.bluetooth-section-title {
+    font-size: 14px;
+    color: #7A8CB1;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #3D4A69;
+}
+
+/* Loading indicator */
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #4D7CFE;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: #7A8CB1;
+    font-size: 14px;
+}
+
+.error-message {
+    color: #F44336;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #F44336;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.no-devices-message {
+    color: #7A8CB1;
+    padding: 15px;
+    text-align: center;
+    border: 1px dashed #3D4A69;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* Search functionality */
+@keyframes searchPulse {
+    0% { background-color: #3a3b45; }
+    50% { background-color: rgba(77, 124, 254, 0.3); }
+    100% { background-color: #3a3b45; }
+}
+
+.sidebar-link.search-match:not(.animation-stopped) {
+    animation: searchPulse 2s infinite;
+    background-color: #3a3b45;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        transform: translateY(100%);
+        height: calc(100vh - 60px);
+        top: 60px;
+        left: 0;
+        right: 0;
+    }
+    
+    .sidebar.collapsed {
+        transform: translateY(100%);
+    }
+    
+    .sidebar.expanded {
+        transform: translateY(0);
+    }
+    
+    .toggle-sidebar-external {
+        top: 15px;
+        left: auto;
+        right: 15px;
+        z-index: 110;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding-top: 60px;
+    }
+    
+    .header {
+        width: 100%;
+        height: 60px;
+        background-color: #1E2433;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+        z-index: 105;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .action-button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .mobile-logo {
+        display: flex !important;
+        align-items: center;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    
+    .central-content {
+        width: 95%;
+    }
+    
+    .connection-options {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on smaller screens */
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+}
+
+/* Fix for smaller screens */
+@media (max-height: 700px) {
+    .modal-body {
+        max-height: 50vh; /* Smaller height on smaller screens */
+    }
+}
+
+/* Hide mobile logo on desktop */
+.mobile-logo {
+    display: none;
+}
+
+/* Disabled input style */
+.disabled-input {
+    background-color: #1E2433 !important;
+    color: #7A8CB1 !important;
+}
+
+/* Style dla adresu MAC */
+.device-address {
+    font-size: 12px;
+    color: #7A8CB1;
+    margin-top: 3px;
+    font-family: monospace;
+}
+
+/* Poprawione style dla listy urządzeń, aby lepiej wyświetlać MAC */
+.device-list-item {
+    display: flex;
+    align-items: flex-start;  /* Zmienione z center na flex-start */
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-bottom: 5px;
+}
+
+.device-list-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;  /* Zapobiega wylewaniu się długich adresów MAC */
+}
+
+.device-list-name {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
