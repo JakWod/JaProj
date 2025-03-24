@@ -15,9 +15,7 @@ let devicePasswords = {}; // Object to store device passwords
 let currentActionDevice = null; // Currently edited/deleted device
 let currentActionType = null; // Action type ('edit' or 'delete')
 
-/**
- * Device scanning and selection functionality
- */
+// Modified scanForDevices function with improved duplicate detection
 function scanForDevices(method) {
     const deviceListContainer = document.querySelector('.device-list-container');
     
@@ -51,8 +49,77 @@ function scanForDevices(method) {
             }
             
             if (data.devices && data.devices.length > 0) {
-                // Show found devices
-                data.devices.forEach((device, index) => {
+                // Get existing devices from sidebar to check for duplicates
+                const existingDevices = document.querySelectorAll('.sidebar-link');
+                
+                // Create sets for both address and id-based comparison
+                const existingAddresses = new Set();
+                const existingIds = new Set();
+                const existingNames = new Set(); // Add names comparison for cases without address/id
+                
+                // Collect all existing device identifiers
+                existingDevices.forEach(device => {
+                    // Collect address
+                    const deviceAddress = device.getAttribute('data-ip') || '';
+                    if (deviceAddress) {
+                        existingAddresses.add(deviceAddress.toLowerCase());
+                    }
+                    
+                    // Collect device ID 
+                    const deviceId = device.getAttribute('data-device-id') || '';
+                    if (deviceId) {
+                        existingIds.add(deviceId);
+                    }
+                    
+                    // Collect device name as fallback
+                    const deviceNameElem = device.querySelector('.device-name');
+                    if (deviceNameElem) {
+                        // Extract just the text without HTML
+                        let deviceName = deviceNameElem.textContent.trim();
+                        // Remove status icon, favorite star, device type icon
+                        deviceName = deviceName.replace(/[★☆🔌📱💻🖨️🖥️📹🌡️]/g, '').trim();
+                        if (deviceName) {
+                            existingNames.add(deviceName.toLowerCase());
+                        }
+                    }
+                });
+                
+                // Filter out devices that are already in the sidebar
+                const uniqueDevices = data.devices.filter(device => {
+                    const deviceAddress = (device.address || '').toLowerCase();
+                    const deviceId = device.id || '';
+                    const deviceName = (device.name || '').toLowerCase();
+                    
+                    // First check by address (most reliable)
+                    if (deviceAddress && existingAddresses.has(deviceAddress)) {
+                        return false;
+                    }
+                    
+                    // Then check by ID
+                    if (deviceId && existingIds.has(deviceId)) {
+                        return false;
+                    }
+                    
+                    // Finally check by name (least reliable, but useful fallback)
+                    if (deviceName && existingNames.has(deviceName)) {
+                        return false;
+                    }
+                    
+                    // If none of the above matches, it's likely a new device
+                    return true;
+                });
+                
+                if (uniqueDevices.length === 0) {
+                    // All found devices are already in the sidebar
+                    const noNewDevicesDiv = document.createElement('div');
+                    noNewDevicesDiv.className = 'no-devices-message';
+                    noNewDevicesDiv.textContent = 'All detected devices are already added to your sidebar.';
+                    deviceListContainer.appendChild(noNewDevicesDiv);
+                    return;
+                }
+                
+                // Show found unique devices
+                uniqueDevices.forEach((device, index) => {
                     const deviceItem = document.createElement('div');
                     deviceItem.className = 'device-list-item';
                     deviceItem.setAttribute('data-id', device.id);
