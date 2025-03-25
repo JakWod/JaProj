@@ -15,7 +15,78 @@ let devicePasswords = {}; // Object to store device passwords
 let currentActionDevice = null; // Currently edited/deleted device
 let currentActionType = null; // Action type ('edit' or 'delete')
 
-// Modified scanForDevices function with improved duplicate detection
+/**
+ * Function to query device capabilities/operations
+ * @param {string} deviceId - Device identifier
+ * @param {string} deviceAddress - Device IP address or MAC address
+ * @param {string} deviceType - Type of device
+ * @param {string} connectionMethod - How the device was discovered (wifi, bluetooth, camera)
+ */
+function queryDeviceCapabilities(deviceId, deviceAddress, deviceType, connectionMethod) {
+    console.log(`Querying capabilities for device: ${deviceId} (${deviceAddress})`);
+    
+    // Create the URL with query parameters
+    let queryUrl = `${API_BASE_URL}/devices/capabilities?`;
+    queryUrl += `address=${encodeURIComponent(deviceAddress || '')}`;
+    queryUrl += `&type=${encodeURIComponent(deviceType || '')}`;
+    queryUrl += `&method=${encodeURIComponent(connectionMethod || '')}`;
+    queryUrl += `&id=${encodeURIComponent(deviceId || '')}`;
+    
+    // Show query in console for debugging
+    console.log(`Sending capability query to: ${queryUrl}`);
+    
+    // Make API request to get device capabilities
+    fetch(queryUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                console.error(`Error querying device capabilities: ${data.error}`);
+                return;
+            }
+            
+            // Display available operations in console
+            console.group(`Available Operations for Device: ${deviceId}`);
+            console.log(`Device Address: ${deviceAddress}`);
+            console.log(`Device Type: ${deviceType}`);
+            console.log(`Connection Method: ${connectionMethod}`);
+            
+            if (data.capabilities && data.capabilities.length > 0) {
+                console.log('Operations:');
+                data.capabilities.forEach((capability, index) => {
+                    console.log(`${index + 1}. ${capability.name}: ${capability.description}`);
+                });
+            } else {
+                console.log('No operations available for this device.');
+            }
+            
+            // If device returned any raw data, show it for debugging
+            if (data.rawData) {
+                console.group('Raw Device Data:');
+                console.log(data.rawData);
+                console.groupEnd();
+            }
+            
+            console.groupEnd();
+        })
+        .catch(error => {
+            console.error('Error querying device capabilities:', error);
+            
+            // Simple message when capabilities can't be determined
+            console.group(`Device Operations: ${deviceId}`);
+            console.log('Unable to determine device operations.');
+            console.log(`Error: ${error.message}`);
+            console.groupEnd();
+        });
+}
+
+/**
+ * Device scanning and selection functionality
+ */
 function scanForDevices(method) {
     const deviceListContainer = document.querySelector('.device-list-container');
     
@@ -52,10 +123,11 @@ function scanForDevices(method) {
                 // Get existing devices from sidebar to check for duplicates
                 const existingDevices = document.querySelectorAll('.sidebar-link');
                 
-                // Create sets for both address and id-based comparison
+                // Create sets for address, id, and unique_id comparison
                 const existingAddresses = new Set();
                 const existingIds = new Set();
-                const existingNames = new Set(); // Add names comparison for cases without address/id
+                const existingUniqueIds = new Set();
+                const existingNames = new Set(); // only for logging/debugging
                 
                 // Collect all existing device identifiers
                 existingDevices.forEach(device => {
@@ -71,7 +143,13 @@ function scanForDevices(method) {
                         existingIds.add(deviceId);
                     }
                     
-                    // Collect device name as fallback
+                    // Collect unique ID
+                    const uniqueId = device.getAttribute('data-unique-id') || '';
+                    if (uniqueId) {
+                        existingUniqueIds.add(uniqueId);
+                    }
+                    
+                    // Collect device name for debugging purposes
                     const deviceNameElem = device.querySelector('.device-name');
                     if (deviceNameElem) {
                         // Extract just the text without HTML
@@ -89,23 +167,46 @@ function scanForDevices(method) {
                     const deviceAddress = (device.address || '').toLowerCase();
                     const deviceId = device.id || '';
                     const deviceName = (device.name || '').toLowerCase();
+                    const uniqueId = device.unique_id || '';
                     
                     // First check by address (most reliable)
                     if (deviceAddress && existingAddresses.has(deviceAddress)) {
+                        console.log(`Filtering out device with existing address: ${deviceAddress}`);
+                        return false;
+                    }
+                    
+                    // Then check by unique_id (if available)
+                    if (uniqueId && existingUniqueIds.has(uniqueId)) {
+                        console.log(`Filtering out device with existing unique ID: ${uniqueId}`);
                         return false;
                     }
                     
                     // Then check by ID
                     if (deviceId && existingIds.has(deviceId)) {
+                        console.log(`Filtering out device with existing ID: ${deviceId}`);
                         return false;
                     }
                     
-                    // Finally check by name (least reliable, but useful fallback)
-                    if (deviceName && existingNames.has(deviceName)) {
+                    // Check if the device has a similar name + type combination that could indicate a duplicate
+                    const deviceTypeIcon = device.type || getDeviceIconByName(device.name);
+                    const nameTypePair = `${deviceName}:${deviceTypeIcon}`.toLowerCase();
+                    
+                    // Create nameTypePair set for more thorough comparison
+                    const existingNameTypePairs = new Set();
+                    existingDevices.forEach(existingDevice => {
+                        const existingName = existingDevice.querySelector('.device-name')?.textContent.trim() || '';
+                        // Remove status icon, favorite star, type icon, and other symbols
+                        const cleanName = existingName.replace(/[★☆🔌📱💻🖨️🖥️📹🌡️🔒]/g, '').trim().toLowerCase();
+                        const existingType = existingDevice.getAttribute('data-device-type') || '';
+                        existingNameTypePairs.add(`${cleanName}:${existingType}`.toLowerCase());
+                    });
+                    
+                    if (existingNameTypePairs.has(nameTypePair)) {
+                        console.log(`Filtering out device with existing name+type: ${nameTypePair}`);
                         return false;
                     }
                     
-                    // If none of the above matches, it's likely a new device
+                    // If none of the above matches, it's a new device
                     return true;
                 });
                 
@@ -123,6 +224,11 @@ function scanForDevices(method) {
                     const deviceItem = document.createElement('div');
                     deviceItem.className = 'device-list-item';
                     deviceItem.setAttribute('data-id', device.id);
+                    
+                    // Also store unique_id if available
+                    if (device.unique_id) {
+                        deviceItem.setAttribute('data-unique-id', device.unique_id);
+                    }
                     
                     const deviceIcon = device.type || getDeviceIconByName(device.name);
                     const deviceName = device.name || 'Nieznane urządzenie';
@@ -172,6 +278,23 @@ function scanForDevices(method) {
                             // For WiFi networks we can simulate IP
                             document.getElementById('deviceIP').value = generateRandomIP();
                         }
+
+                        // Save unique_id to a hidden field or attribute for later use
+                        if (device.unique_id) {
+                            if (!document.getElementById('deviceUniqueId')) {
+                                // Create hidden field if it doesn't exist
+                                const hiddenField = document.createElement('input');
+                                hiddenField.type = 'hidden';
+                                hiddenField.id = 'deviceUniqueId';
+                                hiddenField.value = device.unique_id;
+                                document.getElementById('addDeviceForm').appendChild(hiddenField);
+                            } else {
+                                document.getElementById('deviceUniqueId').value = device.unique_id;
+                            }
+                        }
+
+                        // Query device capabilities
+                        queryDeviceCapabilities(device.id, device.address, iconType, method);
                     });
                     
                     deviceListContainer.appendChild(deviceItem);
@@ -243,9 +366,68 @@ function scanBluetoothDevices() {
         // Prepare available devices (not paired)
         const availableDevices = availableData.devices || [];
         
+        // Get existing devices from sidebar to check for duplicates
+        const existingDevices = document.querySelectorAll('.sidebar-link');
+        
+        // Create sets for both address and id-based comparison
+        const existingAddresses = new Set();
+        const existingIds = new Set();
+        const existingUniqueIds = new Set();
+        
+        // Collect all existing device identifiers
+        existingDevices.forEach(device => {
+            // Collect address
+            const deviceAddress = device.getAttribute('data-ip') || '';
+            if (deviceAddress) {
+                existingAddresses.add(deviceAddress.toLowerCase());
+            }
+            
+            // Collect device ID 
+            const deviceId = device.getAttribute('data-device-id') || '';
+            if (deviceId) {
+                existingIds.add(deviceId);
+            }
+            
+            // Collect unique ID
+            const uniqueId = device.getAttribute('data-unique-id') || '';
+            if (uniqueId) {
+                existingUniqueIds.add(uniqueId);
+            }
+        });
+        
+        // Filter out devices that are already in the sidebar
+        const filterExistingDevices = (devices) => {
+            return devices.filter(device => {
+                const deviceAddress = (device.address || '').toLowerCase();
+                const deviceId = device.id || '';
+                const uniqueId = device.unique_id || '';
+                
+                // First check by address (most reliable for Bluetooth)
+                if (deviceAddress && existingAddresses.has(deviceAddress)) {
+                    return false;
+                }
+                
+                // Then check by unique_id (if available)
+                if (uniqueId && existingUniqueIds.has(uniqueId)) {
+                    return false;
+                }
+                
+                // Then check by ID
+                if (deviceId && existingIds.has(deviceId)) {
+                    return false;
+                }
+                
+                // If no matches, it's a new device
+                return true;
+            });
+        };
+        
+        const filteredPairedDevices = filterExistingDevices(pairedDevices);
+        const filteredAvailableDevices = filterExistingDevices(availableDevices);
+        
         // Device count
-        const hasPaired = pairedDevices.length > 0;
-        const hasAvailable = availableDevices.length > 0;
+        const hasPaired = filteredPairedDevices.length > 0;
+        const hasAvailable = filteredAvailableDevices.length > 0;
         
         // Create container for device lists
         const bluetoothContainer = document.createElement('div');
@@ -264,7 +446,7 @@ function scanBluetoothDevices() {
             const pairedList = document.createElement('div');
             pairedList.className = 'bluetooth-device-list';
             
-            pairedDevices.forEach((device) => {
+            filteredPairedDevices.forEach((device) => {
                 const deviceItem = createDeviceListItem(device, true);
                 pairedList.appendChild(deviceItem);
             });
@@ -286,7 +468,7 @@ function scanBluetoothDevices() {
             const availableList = document.createElement('div');
             availableList.className = 'bluetooth-device-list';
             
-            availableDevices.forEach((device) => {
+            filteredAvailableDevices.forEach((device) => {
                 const deviceItem = createDeviceListItem(device, false);
                 availableList.appendChild(deviceItem);
             });
@@ -295,11 +477,11 @@ function scanBluetoothDevices() {
             bluetoothContainer.appendChild(availableSection);
         }
         
-        // If no devices found
+        // If no new devices found
         if (!hasPaired && !hasAvailable) {
             const noDevicesDiv = document.createElement('div');
             noDevicesDiv.className = 'no-devices-message';
-            noDevicesDiv.textContent = 'No Bluetooth devices found.';
+            noDevicesDiv.textContent = 'No new Bluetooth devices found or all devices are already added.';
             bluetoothContainer.appendChild(noDevicesDiv);
         }
         
@@ -330,6 +512,11 @@ function createDeviceListItem(device, isPaired) {
     deviceItem.className = 'device-list-item';
     if (isPaired) deviceItem.classList.add('paired-device');
     deviceItem.setAttribute('data-id', device.id);
+    
+    // Store unique_id if available
+    if (device.unique_id) {
+        deviceItem.setAttribute('data-unique-id', device.unique_id);
+    }
     
     const deviceIcon = device.type || getDeviceIconByName(device.name);
     const deviceName = device.name || 'Nieznane urządzenie';
@@ -378,6 +565,23 @@ function createDeviceListItem(device, isPaired) {
             device.address !== "Nieznany adres" && device.address !== "Brak sparowanych urządzeń") {
             document.getElementById('deviceIP').value = device.address;
         }
+
+        // Save unique_id to a hidden field or attribute for later use
+        if (device.unique_id) {
+            if (!document.getElementById('deviceUniqueId')) {
+                // Create hidden field if it doesn't exist
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.id = 'deviceUniqueId';
+                hiddenField.value = device.unique_id;
+                document.getElementById('addDeviceForm').appendChild(hiddenField);
+            } else {
+                document.getElementById('deviceUniqueId').value = device.unique_id;
+            }
+        }
+
+        // Query device capabilities
+        queryDeviceCapabilities(device.id, device.address, iconType, 'bluetooth');
     });
     
     return deviceItem;
@@ -633,6 +837,13 @@ function shouldBeFiltered(deviceElement) {
  */
 // Add new device to sidebar
 function addDeviceToSidebar(name, id, isProtected, deviceType, deviceIP, isManuallyAdded) {
+    // Try to get unique ID from hidden field
+    let uniqueId = '';
+    const uniqueIdField = document.getElementById('deviceUniqueId');
+    if (uniqueIdField) {
+        uniqueId = uniqueIdField.value;
+    }
+    
     // Create new device element
     const newDevice = document.createElement('div');
     newDevice.className = 'sidebar-link';
@@ -670,6 +881,11 @@ function addDeviceToSidebar(name, id, isProtected, deviceType, deviceIP, isManua
     // Add information if device was manually added
     newDevice.setAttribute('data-manual-add', isManuallyAdded ? 'true' : 'false');
     
+    // Add unique ID if available
+    if (uniqueId) {
+        newDevice.setAttribute('data-unique-id', uniqueId);
+    }
+    
     // Add device to appropriate section
     if (randomStatus === 'online') {
         const onlineSection = document.querySelector('.sidebar-category.online-devices');
@@ -699,6 +915,35 @@ function addDeviceToSidebar(name, id, isProtected, deviceType, deviceIP, isManua
         e.stopPropagation(); // Stop propagation
         toggleFavorite(newDevice);
     });
+
+    // Add click handler for device capabilities
+    newDevice.addEventListener('click', function(event) {
+        if (!event.target.closest('.device-actions') && !event.target.closest('.favorite-star')) {
+            // Toggle device status - original behavior
+            toggleDeviceStatus(newDevice);
+            
+            // After toggling status, query capabilities
+            const deviceId = newDevice.getAttribute('data-device-id');
+            const deviceAddress = newDevice.getAttribute('data-ip') || '';
+            const deviceType = newDevice.getAttribute('data-device-type') || '';
+            const isManuallyAdded = newDevice.getAttribute('data-manual-add') === 'true';
+            
+            // Determine connection method based on device attributes
+            let connectionMethod = 'unknown';
+            if (isManuallyAdded) {
+                connectionMethod = 'manual';
+            } else if (deviceAddress.includes(':')) {
+                connectionMethod = 'bluetooth';
+            } else if (deviceType === '📹') {
+                connectionMethod = 'camera';
+            } else {
+                connectionMethod = 'wifi';
+            }
+            
+            // Query device capabilities
+            queryDeviceCapabilities(deviceId, deviceAddress, deviceType, connectionMethod);
+        }
+    });
     
     // Open sidebar if it's closed
     if (sidebar.classList.contains('collapsed')) {
@@ -727,6 +972,12 @@ function updateDeviceInSidebar(deviceElement, name, id, isProtected, deviceType,
     // Keep information if device was manually added
     if (typeof isManuallyAdded !== 'undefined') {
         deviceElement.setAttribute('data-manual-add', isManuallyAdded ? 'true' : 'false');
+    }
+    
+    // Try to get unique ID from hidden field for edit modal
+    const uniqueIdField = document.getElementById('editDeviceUniqueId');
+    if (uniqueIdField && uniqueIdField.value) {
+        deviceElement.setAttribute('data-unique-id', uniqueIdField.value);
     }
     
     deviceNameElement.innerHTML = `
@@ -819,11 +1070,25 @@ function openEditDeviceModal(deviceElement) {
     const deviceIP = deviceElement.getAttribute('data-ip') || '';
     const isManuallyAdded = deviceElement.getAttribute('data-manual-add') === 'true';
     
+    // Get unique ID if available
+    const uniqueId = deviceElement.getAttribute('data-unique-id') || '';
+    
     // Fill edit form
     editDeviceNameInput.value = cleanName;
     editDeviceIdInput.value = deviceId;
     editPasswordProtectCheckbox.checked = isProtected;
     editDeviceTypeSelect.value = deviceType;
+    
+    // Store unique ID in a hidden field
+    if (!document.getElementById('editDeviceUniqueId')) {
+        const uniqueIdField = document.createElement('input');
+        uniqueIdField.type = 'hidden';
+        uniqueIdField.id = 'editDeviceUniqueId';
+        uniqueIdField.value = uniqueId;
+        document.getElementById('editDeviceForm').appendChild(uniqueIdField);
+    } else {
+        document.getElementById('editDeviceUniqueId').value = uniqueId;
+    }
     
     // If IP edit element exists, fill it with IP address
     const editDeviceIPInput = document.getElementById('editDeviceIP');
@@ -953,8 +1218,6 @@ function ensureMatchingSectionsVisible() {
     }
 }
 
-
-
 // Close modal
 function closeModal(modal) {
     modal.classList.remove('show');
@@ -1042,6 +1305,12 @@ document.addEventListener('DOMContentLoaded', function() {
         deviceIPGroup.style.display = 'none'; // Hide IP field initially
         deviceTypeSelect.value = deviceTypeSelect.options[0].value; // Default value
         
+        // Remove any previous hidden unique ID field
+        const oldUniqueIdField = document.getElementById('deviceUniqueId');
+        if (oldUniqueIdField) {
+            oldUniqueIdField.remove();
+        }
+        
         // Reset connection method choices
         const connectionOptions = document.querySelectorAll('.connection-option');
         connectionOptions.forEach(opt => opt.classList.remove('selected'));
@@ -1071,14 +1340,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editDevicePassword').setAttribute('required', 'required');
         } else {
             document.getElementById('editDevicePassword').removeAttribute('required');
-        }
-    });
-    
-    // Device click handler (toggles status - demo only)
-    sidebar.addEventListener('click', function(event) {
-        const deviceElement = event.target.closest('.sidebar-link');
-        if (deviceElement && !event.target.closest('.device-actions') && !event.target.closest('.favorite-star')) {
-            toggleDeviceStatus(deviceElement);
         }
     });
     
@@ -1350,6 +1611,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Close modals by clicking outside
+    // Close modals by clicking outside
     window.addEventListener('click', function(event) {
         if (event.target === addDeviceModal) {
             closeModal(addDeviceModal);
@@ -1412,4 +1674,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     `;
     document.head.appendChild(style);
+
+    console.log('Device capability querying has been enabled.');
+    console.log('Improved device filtering to prevent duplicates is active.');
 });
